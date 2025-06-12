@@ -1,0 +1,402 @@
+import React, { useState, useEffect } from 'react';
+import { Ticket, Beer, UtensilsCrossed, Calculator, Trash2, Plus, Minus, Euro, ArrowRight } from 'lucide-react';
+
+export default function TicketManager() {
+  const [foodTicketNumber, setFoodTicketNumber] = useState(1);
+  const [beerTicketNumber, setBeerTicketNumber] = useState(1);
+  const [foodPrice, setFoodPrice] = useState(10);
+  const [beerPrice, setBeerPrice] = useState(5);
+  const [soldTickets, setSoldTickets] = useState([]);
+  const [showSummary, setShowSummary] = useState(false);
+  const [showCalculator, setShowCalculator] = useState(false);
+  const [calculatorAmount, setCalculatorAmount] = useState('');
+  const [selectedPrice, setSelectedPrice] = useState(0);
+
+  const addTicket = (type, price) => {
+    const ticket = {
+      id: Date.now(),
+      type: type,
+      number: type === 'cibo' ? foodTicketNumber : beerTicketNumber,
+      price: price,
+      timestamp: new Date().toLocaleTimeString('it-IT')
+    };
+    
+    setSoldTickets(prev => [...prev, ticket]);
+    
+    if (type === 'cibo') {
+      setFoodTicketNumber(prev => prev + 1);
+    } else {
+      setBeerTicketNumber(prev => prev + 1);
+    }
+  };
+
+  const removeTicket = (ticketId) => {
+    setSoldTickets(prev => prev.filter(ticket => ticket.id !== ticketId));
+  };
+
+  const resetCounters = () => {
+    setFoodTicketNumber(1);
+    setBeerTicketNumber(1);
+    setSoldTickets([]);
+  };
+
+  const openCalculator = (price, type) => {
+    setSelectedPrice(price);
+    setCalculatorAmount('');
+    setShowCalculator(true);
+  };
+
+  const addToCalculator = (digit) => {
+    if (calculatorAmount.length < 6) {
+      setCalculatorAmount(prev => prev + digit);
+    }
+  };
+
+  const clearCalculator = () => {
+    setCalculatorAmount('');
+  };
+
+  const calculateChange = () => {
+    const paid = parseFloat(calculatorAmount) || 0;
+    const change = paid - selectedPrice;
+    return change >= 0 ? change : null;
+  };
+
+  const completeTransaction = () => {
+    const change = calculateChange();
+    if (change !== null) {
+      const type = selectedPrice === foodPrice ? 'cibo' : 'birra';
+      addTicket(type, selectedPrice);
+      setShowCalculator(false);
+      setCalculatorAmount('');
+    }
+  };
+
+  const calculateTotals = () => {
+    const foodTickets = soldTickets.filter(t => t.type === 'cibo');
+    const beerTickets = soldTickets.filter(t => t.type === 'birra');
+    
+    const foodRevenue = foodTickets.reduce((sum, t) => sum + t.price, 0);
+    const beerRevenue = beerTickets.reduce((sum, t) => sum + t.price, 0);
+    const totalRevenue = foodRevenue + beerRevenue;
+    
+    return {
+      foodCount: foodTickets.length,
+      beerCount: beerTickets.length,
+      foodRevenue,
+      beerRevenue,
+      totalRevenue,
+      totalTickets: soldTickets.length
+    };
+  };
+
+  const totals = calculateTotals();
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 p-4">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-6 border border-orange-100">
+          <h1 className="text-3xl font-bold text-gray-800 text-center mb-2 flex items-center justify-center gap-3">
+            <Ticket className="text-orange-500" size={32} />
+            Gestione Ticket Cassa
+          </h1>
+          <p className="text-gray-600 text-center">Sistema di vendita ticket numerati per cibo e birra</p>
+        </div>
+
+        {/* Price Settings */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-6 border border-orange-100">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">Impostazioni Prezzi</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex items-center gap-4">
+              <UtensilsCrossed className="text-green-600" size={24} />
+              <label className="text-gray-700 font-medium">Prezzo Cibo:</label>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setFoodPrice(Math.max(1, foodPrice - 1))}
+                  className="bg-red-500 hover:bg-red-600 text-white p-1 rounded"
+                >
+                  <Minus size={16} />
+                </button>
+                <span className="bg-gray-100 px-3 py-1 rounded font-semibold min-w-16 text-center">
+                  €{foodPrice}
+                </span>
+                <button 
+                  onClick={() => setFoodPrice(foodPrice + 1)}
+                  className="bg-green-500 hover:bg-green-600 text-white p-1 rounded"
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <Beer className="text-amber-600" size={24} />
+              <label className="text-gray-700 font-medium">Prezzo Birra:</label>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setBeerPrice(Math.max(1, beerPrice - 1))}
+                  className="bg-red-500 hover:bg-red-600 text-white p-1 rounded"
+                >
+                  <Minus size={16} />
+                </button>
+                <span className="bg-gray-100 px-3 py-1 rounded font-semibold min-w-16 text-center">
+                  €{beerPrice}
+                </span>
+                <button 
+                  onClick={() => setBeerPrice(beerPrice + 1)}
+                  className="bg-green-500 hover:bg-green-600 text-white p-1 rounded"
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Ticket Generation */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          {/* Food Tickets */}
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-green-100">
+            <div className="text-center">
+              <UtensilsCrossed className="mx-auto text-green-600 mb-4" size={48} />
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Ticket Cibo</h2>
+              <div className="text-4xl font-bold text-green-600 mb-4">#{foodTicketNumber}</div>
+              <div className="text-lg text-gray-600 mb-4">Prezzo: €{foodPrice}</div>
+              <div className="space-y-2">
+                <button
+                  onClick={() => addTicket('cibo', foodPrice)}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200"
+                >
+                  Emetti Ticket Veloce
+                </button>
+                <button
+                  onClick={() => openCalculator(foodPrice, 'cibo')}
+                  className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
+                >
+                  <Calculator size={18} />
+                  Calcola Resto
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Beer Tickets */}
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-amber-100">
+            <div className="text-center">
+              <Beer className="mx-auto text-amber-600 mb-4" size={48} />
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Ticket Birra</h2>
+              <div className="text-4xl font-bold text-amber-600 mb-4">#{beerTicketNumber}</div>
+              <div className="text-lg text-gray-600 mb-4">Prezzo: €{beerPrice}</div>
+              <div className="space-y-2">
+                <button
+                  onClick={() => addTicket('birra', beerPrice)}
+                  className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200"
+                >
+                  Emetti Ticket Veloce
+                </button>
+                <button
+                  onClick={() => openCalculator(beerPrice, 'birra')}
+                  className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
+                >
+                  <Calculator size={18} />
+                  Calcola Resto
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Calculator Modal */}
+        {showCalculator && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
+              <div className="text-center mb-6">
+                <Euro className="mx-auto text-blue-600 mb-2" size={32} />
+                <h2 className="text-2xl font-bold text-gray-800">Calcolatrice Resto</h2>
+                <div className="text-lg text-gray-600 mt-2">
+                  Prezzo: <span className="font-bold text-blue-600">€{selectedPrice}</span>
+                </div>
+              </div>
+
+              {/* Display */}
+              <div className="bg-gray-100 p-4 rounded-lg mb-6 text-center">
+                <div className="text-sm text-gray-600 mb-1">Importo ricevuto:</div>
+                <div className="text-3xl font-bold text-gray-800 mb-2">
+                  €{calculatorAmount || '0'}
+                </div>
+                {calculatorAmount && (
+                  <div className="border-t pt-2">
+                    {calculateChange() !== null ? (
+                      <div className="flex items-center justify-center gap-2 text-lg">
+                        <span className="text-gray-600">Resto:</span>
+                        <ArrowRight size={16} className="text-gray-400" />
+                        <span className="font-bold text-green-600">
+                          €{calculateChange().toFixed(2)}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="text-red-600 font-semibold">Importo insufficiente</div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Number Pad */}
+              <div className="grid grid-cols-3 gap-3 mb-6">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                  <button
+                    key={num}
+                    onClick={() => addToCalculator(num.toString())}
+                    className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-4 px-6 rounded-lg text-xl transition-colors duration-200"
+                  >
+                    {num}
+                  </button>
+                ))}
+                <button
+                  onClick={() => addToCalculator('.')}
+                  className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-4 px-6 rounded-lg text-xl transition-colors duration-200"
+                >
+                  .
+                </button>
+                <button
+                  onClick={() => addToCalculator('0')}
+                  className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-4 px-6 rounded-lg text-xl transition-colors duration-200"
+                >
+                  0
+                </button>
+                <button
+                  onClick={clearCalculator}
+                  className="bg-red-500 hover:bg-red-600 text-white font-bold py-4 px-6 rounded-lg text-xl transition-colors duration-200"
+                >
+                  C
+                </button>
+              </div>
+
+              {/* Quick Amount Buttons */}
+              <div className="grid grid-cols-4 gap-2 mb-6">
+                {[5, 10, 20, 50].map((amount) => (
+                  <button
+                    key={amount}
+                    onClick={() => setCalculatorAmount(amount.toString())}
+                    className="bg-blue-100 hover:bg-blue-200 text-blue-800 font-semibold py-2 px-3 rounded text-sm transition-colors duration-200"
+                  >
+                    €{amount}
+                  </button>
+                ))}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowCalculator(false)}
+                  className="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-200"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={completeTransaction}
+                  disabled={calculateChange() === null}
+                  className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition-colors duration-200"
+                >
+                  Conferma & Emetti
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Summary Toggle */}
+        <div className="text-center mb-6">
+          <button
+            onClick={() => setShowSummary(!showSummary)}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200 flex items-center gap-2 mx-auto"
+          >
+            <Calculator size={20} />
+            {showSummary ? 'Nascondi Riepilogo' : 'Mostra Riepilogo Serata'}
+          </button>
+        </div>
+
+        {/* Summary Section */}
+        {showSummary && (
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-6 border border-blue-100">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">📊 Riepilogo Serata</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                <div className="text-center">
+                  <UtensilsCrossed className="mx-auto text-green-600 mb-2" size={32} />
+                  <div className="text-2xl font-bold text-green-600">{totals.foodCount}</div>
+                  <div className="text-gray-700 font-medium">Ticket Cibo</div>
+                  <div className="text-lg font-semibold text-green-600 mt-1">€{totals.foodRevenue}</div>
+                </div>
+              </div>
+              
+              <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
+                <div className="text-center">
+                  <Beer className="mx-auto text-amber-600 mb-2" size={32} />
+                  <div className="text-2xl font-bold text-amber-600">{totals.beerCount}</div>
+                  <div className="text-gray-700 font-medium">Ticket Birra</div>
+                  <div className="text-lg font-semibold text-amber-600 mt-1">€{totals.beerRevenue}</div>
+                </div>
+              </div>
+              
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <div className="text-center">
+                  <Calculator className="mx-auto text-blue-600 mb-2" size={32} />
+                  <div className="text-2xl font-bold text-blue-600">{totals.totalTickets}</div>
+                  <div className="text-gray-700 font-medium">Totale Ticket</div>
+                  <div className="text-xl font-bold text-blue-600 mt-1">€{totals.totalRevenue}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Recent Tickets */}
+            {soldTickets.length > 0 && (
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">Ultimi Ticket Venduti</h3>
+                <div className="max-h-64 overflow-y-auto">
+                  <div className="space-y-2">
+                    {soldTickets.slice(-10).reverse().map((ticket) => (
+                      <div key={ticket.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          {ticket.type === 'cibo' ? 
+                            <UtensilsCrossed className="text-green-600" size={20} /> : 
+                            <Beer className="text-amber-600" size={20} />
+                          }
+                          <span className="font-medium">
+                            {ticket.type === 'cibo' ? 'Cibo' : 'Birra'} #{ticket.number}
+                          </span>
+                          <span className="text-gray-500 text-sm">{ticket.timestamp}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-gray-800">€{ticket.price}</span>
+                          <button
+                            onClick={() => removeTicket(ticket.id)}
+                            className="text-red-600 hover:text-red-800 p-1"
+                            title="Rimuovi ticket"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Reset Button */}
+            <div className="text-center">
+              <button
+                onClick={resetCounters}
+                className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200"
+              >
+                Reset Contatori
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
